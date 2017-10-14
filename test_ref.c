@@ -9,6 +9,8 @@
 enum { INS, DEL, WRDMAX = 256, STKMAX = 512, LMAX = 1024 };
 #define REF INS
 #define CPY DEL
+#define MEMPOOLSIZE 300000
+#define POOL 1
 
 /* timing helper function */
 static double tvgetf(void)
@@ -36,6 +38,10 @@ static void rmcrlf(char *s)
 
 int main(int argc, char **argv)
 {
+#ifdef POOL
+    printf("Using memory pool\n");
+#endif
+
     char word[WRDMAX] = "";
     char *sgl[LMAX] = {NULL};
     tst_node *root = NULL, *res = NULL;
@@ -47,6 +53,9 @@ int main(int argc, char **argv)
         fprintf(stderr, "error: file open failed '%s'.\n", argv[1]);
         return 1;
     }
+#ifdef POOL
+    pool *mpool = pool_create(WRDMAX * MEMPOOLSIZE);
+#endif
 
     t1 = tvgetf();
     while ((rtn = fscanf(fp, "%s", word)) != EOF) {
@@ -55,8 +64,13 @@ int main(int argc, char **argv)
         word[len - 1] = 0;
 
         char *p = word;
+#ifdef POOL
+        p = (char *) pool_alloc(mpool, sizeof word);
+        strcpy(p, word);
+#else
         p = strdup(word);
-        /* FIXME: insert reference to each string */
+#endif
+        // /* FIXME: insert reference to each string */
         if (!tst_ins_del(&root, &p, INS, REF)) {
             fprintf(stderr, "error: memory exhausted, tst_insert.\n");
             fclose(fp);
@@ -89,7 +103,12 @@ int main(int argc, char **argv)
                 break;
             }
             rmcrlf(word);
-            p = word;
+#ifdef POOL
+            p = (char *) pool_alloc(mpool, sizeof word);
+            strcpy(p, word);
+#else
+            p = strdup(word);
+#endif
             t1 = tvgetf();
             /* FIXME: insert reference to each string */
             res = tst_ins_del(&root, &p, INS, REF);
@@ -154,7 +173,12 @@ int main(int argc, char **argv)
             }
             break;
         case 'q':
+#ifdef POOL
+            pool_destroy(mpool);
+            tst_free(root);
+#else
             tst_free_all(root);
+#endif
             return 0;
             break;
         default:

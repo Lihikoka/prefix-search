@@ -235,7 +235,7 @@ void *tst_ins_del(tst_node **root, char *const *s, const int del, const int cpy)
                 if (del) {            /* delete instead of insert   */
                     (curr->refcnt)--; /* decrement reference count  */
                     /* chk refcnt, del 's', return NULL on successful del */
-                    return tst_del_word(root, curr, &stk, 1);
+                    return tst_del_word(root, curr, &stk, 0);
                 } else
                     curr->refcnt++; /* increment refcnt if word exists */
                 return (void *) curr->eqkid; /* pointer to word / NULL on del */
@@ -447,3 +447,30 @@ char *tst_get_string(const tst_node *node)
 
     return NULL;
 }
+
+pool *pool_create(size_t size)
+{
+    pool *p = (pool *) malloc(size + sizeof(pool));
+    p->next = (char *) &p[1];
+    p->end = p->next + size;
+    return p;
+}
+
+void pool_destroy(pool *p)
+{
+    free(p);
+}
+
+size_t pool_available(pool *p)
+{
+    return p->end - p->next;
+}
+
+void *pool_alloc(pool *p, size_t size)
+{
+    if (pool_available(p) < size) return NULL;
+    void *mem = p->next;
+    p->next += size;
+    return mem;
+}
+

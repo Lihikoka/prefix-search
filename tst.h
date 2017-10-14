@@ -73,4 +73,16 @@ char tst_get_key(const tst_node *node);
 unsigned tst_get_refcnt(const tst_node *node);
 char *tst_get_string(const tst_node *node);
 
+/** memory pool **/
+typedef struct __POOL {
+    void *next;
+    void *end;
+} pool;
+
+pool *pool_create(size_t size);
+void pool_destroy(pool *p);
+size_t pool_available(pool *p);
+void *pool_alloc(pool *p, size_t size);
+
+
 #endif
